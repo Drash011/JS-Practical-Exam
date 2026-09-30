@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-cube"></i>
+                <span>ProductPage</span>
+            </div>
+
+            <p class="menu-label">MENU</p>
+            <nav>
+                <a href="#" class="nav-link active" data-page="view">
+                    <i class="fa-solid fa-eye"></i>
+                    <span>View Product</span>
+                </a>
+                <a href="#" class="nav-link" data-page="add">
+                    <i class="fa-solid fa-circle-plus"></i>
+                    <span>Add Product</span>
+                </a>
+                <a href="#" class="nav-link" data-page="edit">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    <span>Edit Product</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="sidebar-note">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <p>Manage your products in one place.</p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <h2 id="pageHeading">View Product</h2>
+                    <p class="subtitle">Manage your product inventory</p>
+                </div>
+            </header>
+
+            <section class="page active" id="viewPage">
+                <div class="welcome-row">
+                    <div>
+                        <h1>Product Overview</h1>
+                        <p>Track and manage all your products here.</p>
+                    </div>
+                    <button class="primary-btn" onclick="showPage('add')">
+            <i class="fa-solid fa-plus"></i> Add Product
+          </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon purple"><i class="fa-solid fa-box"></i></div>
+                        <div>
+                            <p>Total Products</p>
+                            <h2 id="totalProducts">0</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fa-solid fa-layer-group"></i></div>
+                        <div>
+                            <p>Categories</p>
+                            <h2 id="totalCategories">0</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div>
+                            <p>Low Stock</p>
+                            <h2 id="lowStock">0</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <p>Active Products</p>
+                            <h2 id="activeProducts">0</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <div class="section-heading">
+                        <div>
+                            <h2>All Products</h2>
+                            <p>View, search, edit, or delete your products.</p>
+                        </div>
+                        <span class="result-count" id="resultCount">0 products</span>
+                    </div>
+
+                    <div class="filters">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="search" id="productSearch" placeholder="Search by product name..." oninput="renderProducts()">
+                        </div>
+                        <select id="categoryFilter" onchange="renderProducts()">
+              <option value="">All Categories</option>
+            </select>
+                        <select id="sortFilter" onchange="renderProducts()">
+              <option value="newest">Newest First</option>
+              <option value="low">Price: Low to High</option>
+              <option value="high">Price: High to Low</option>
+              <option value="az">Name: A to Z</option>
+            </select>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>PRODUCT</th>
+                                    <th>CATEGORY</th>
+                                    <th>PRICE</th>
+                                    <th>QUANTITY</th>
+                                    <th>STATUS</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTable"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="emptyState">
+                        <i class="fa-solid fa-box-open"></i>
+                        <h3>No products found</h3>
+                        <p>Add a product to get started or change your search.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page" id="addPage">
+                <div class="welcome-row">
+                    <div>
+                        <h1>Add New Product</h1>
+                        <p>Enter the details to add a product to your inventory.</p>
+                    </div>
+                </div>
+
+                <div class="form-layout">
+                    <form id="addForm" class="content-card product-form">
+                        <h2>Product Information</h2>
+                        <p class="form-help">Fields marked with * are required.</p>
+
+                        <div class="form-group">
+                            <label for="addName">Product Name *</label>
+                            <input id="addName" type="text" maxlength="100" placeholder="Enter product name" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="addPrice">Price (₹) *</label>
+                                <input id="addPrice" type="number" min="0.01" step="0.01" placeholder="Enter price" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addQuantity">Quantity *</label>
+                                <input id="addQuantity" type="number" min="0" step="1" placeholder="Enter quantity" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="addCategory">Category *</label>
+                                <input id="addCategory" type="text" maxlength="60" placeholder="e.g. Electronics" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="addStatus">Status</label>
+                                <select id="addStatus">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addImage">Image URL</label>
+                            <input id="addImage" type="url" placeholder="https://example.com/image.jpg">
+                            <small>Optional. Paste a publicly accessible image URL.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="addDescription">Description</label>
+                            <textarea id="addDescription" rows="4" maxlength="500" placeholder="Write a short product description..."></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="reset" class="secondary-btn">Clear Form</button>
+                            <button type="submit" class="primary-btn">
+                <i class="fa-solid fa-plus"></i> Save Product
+              </button>
+                        </div>
+                    </form>
+
+                    <div class="content-card preview-card">
+                        <h2>Image Preview</h2>
+                        <div class="preview-image">
+                            <img id="addImagePreview" alt="Product preview" hidden>
+                            <div id="addImagePlaceholder">
+                                <i class="fa-regular fa-image"></i>
+                                <p>Image preview will appear here</p>
+                            </div>
+                        </div>
+                        <p class="preview-note">The image is displayed using the URL you provide.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EDIT PRODUCT PAGE -->
+            <section class="page" id="editPage">
+                <div class="welcome-row">
+                    <div>
+                        <h1>Edit Product</h1>
+                        <p>Select a product to update its information.</p>
+                    </div>
+                </div>
+
+                <div class="content-card" id="editSelectorCard">
+                    <h2>Select Product</h2>
+                    <p class="form-help">Choose a product from the list to edit it.</p>
+                    <div class="search-box edit-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" id="editSearch" placeholder="Search products..." oninput="renderEditList()">
+                    </div>
+                    <div id="editProductList" class="edit-product-list"></div>
+                </div>
+
+                <div class="content-card edit-form-card" id="editFormCard" hidden>
+                    <div class="section-heading">
+                        <div>
+                            <h2>Update Product</h2>
+                            <p>Change the fields below and save your updates.</p>
+                        </div>
+                        <button type="button" class="secondary-btn" onclick="cancelEdit()">
+              <i class="fa-solid fa-arrow-left"></i> Back to List
+            </button>
+                    </div>
+
+                    <form id="editForm" class="product-form">
+                        <input type="hidden" id="editId">
+
+                        <div class="form-group">
+                            <label for="editName">Product Name *</label>
+                            <input id="editName" type="text" maxlength="100" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editPrice">Price (₹) *</label>
+                                <input id="editPrice" type="number" min="0.01" step="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editQuantity">Quantity *</label>
+                                <input id="editQuantity" type="number" min="0" step="1" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editCategory">Category *</label>
+                                <input id="editCategory" type="text" maxlength="60" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editStatus">Status</label>
+                                <select id="editStatus">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editImage">Image URL</label>
+                            <input id="editImage" type="url" placeholder="https://example.com/image.jpg">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editDescription">Description</label>
+                            <textarea id="editDescription" rows="4" maxlength="500"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="secondary-btn" onclick="cancelEdit()">
+                Cancel
+              </button>
+                            <button type="submit" class="primary-btn">
+                <i class="fa-solid fa-floppy-disk"></i> Update Product
+              </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <footer class="footer">
+                productPage &copy; <span id="currentYear"></span>
+            </footer>
+        </main>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script src="js/script.js"></script>
+</body>
+
+</html>
