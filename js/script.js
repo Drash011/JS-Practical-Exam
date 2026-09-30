@@ -1,16 +1,9 @@
 const AllProducts = "productPageProducts";
-let products = loadProducts();
+let products = JSON.parse(localStorage.getItem(AllProducts)) || [];
 let toastTimer;
 
-const $ = (id) => document.getElementById(id);
-
-function loadProducts() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(AllProducts) || "[]");
-        return Array.isArray(saved) ? saved : [];
-    } catch (error) {
-        return [];
-    }
+function getElement(id) {
+    return document.getElementById(id);
 }
 
 function saveProducts() {
@@ -19,20 +12,6 @@ function saveProducts() {
 
 function makeId() {
     return Math.floor(Math.random() * 90000) + 10000;
-}
-
-function escapeHTML(value) {
-    return String(value || "").replace(/[&<>"']/g, function(char) {
-        const entities = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;",
-        };
-
-        return entities[char];
-    });
 }
 
 function safeImageUrl(value) {
@@ -57,18 +36,18 @@ function formatPrice(price) {
     return Number(price).toLocaleString("en-IN", {
         style: "currency",
         currency: "INR",
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 2
     });
 }
 
 function showToast(message) {
-    const toast = $("toast");
+    const toast = getElement("toast");
 
     if (!toast) {
         return;
     }
 
-    toast.textContent = message;
+    toast.innerText = message;
     toast.classList.add("show");
 
     clearTimeout(toastTimer);
@@ -89,7 +68,7 @@ function showPage(page) {
         section.classList.remove("active");
     });
 
-    const pageElement = $(`${page}Page`);
+    const pageElement = getElement(page + "Page");
 
     if (!pageElement) {
         return;
@@ -104,11 +83,11 @@ function showPage(page) {
     const titles = {
         view: "View Product",
         add: "Add Product",
-        edit: "Edit Product",
+        edit: "Edit Product"
     };
 
-    if ($("pageHeading")) {
-        $("pageHeading").textContent = titles[page];
+    if (getElement("pageHeading")) {
+        getElement("pageHeading").innerText = titles[page];
     }
 
     if (page === "view") {
@@ -116,64 +95,66 @@ function showPage(page) {
         updateStats();
     }
 
-    if (page === "edit") {
-        cancelEdit();
-        renderEditList();
-    }
-
     window.scrollTo({
         top: 0,
-        behavior: "smooth",
+        behavior: "smooth"
     });
 }
 
 document.querySelectorAll(".nav-link").forEach(function(link) {
     link.addEventListener("click", function(event) {
         event.preventDefault();
-        showPage(link.dataset.page);
+
+        const page = link.dataset.page;
+
+        if (page === "edit") {
+            cancelEdit();
+        }
+
+        showPage(page);
     });
 });
 
 function updateStats() {
-    if ($("totalProducts")) {
-        $("totalProducts").textContent = products.length;
+    if (getElement("totalProducts")) {
+        getElement("totalProducts").innerText = products.length;
     }
 
-    const categories = new Set(
-        products
-        .map(function(product) {
-            return String(product.category || "")
-                .trim()
-                .toLowerCase();
-        })
-        .filter(Boolean),
-    );
+    const categories = [
+        ...new Set(
+            products
+            .map(function(product) {
+                return String(product.category || "").trim().toLowerCase();
+            })
+            .filter(Boolean)
+        )
+    ];
 
-    if ($("totalCategories")) {
-        $("totalCategories").textContent = categories.size;
+    if (getElement("totalCategories")) {
+        getElement("totalCategories").innerText = categories.length;
     }
 
-    if ($("lowStock")) {
-        $("lowStock").textContent = products.filter(function(product) {
+    if (getElement("lowStock")) {
+        getElement("lowStock").innerText = products.filter(function(product) {
             return Number(product.quantity) <= 5;
         }).length;
     }
 
-    if ($("activeProducts")) {
-        $("activeProducts").textContent = products.filter(function(product) {
+    if (getElement("activeProducts")) {
+        getElement("activeProducts").innerText = products.filter(function(product) {
             return product.status === "Active";
         }).length;
     }
 }
 
 function updateCategoryFilter() {
-    const select = $("categoryFilter");
+    const categoryFilter = getElement("categoryFilter");
 
-    if (!select) {
+    if (!categoryFilter) {
         return;
     }
 
-    const previous = select.value;
+    const oldValue = categoryFilter.value;
 
     const categories = [
         ...new Set(
@@ -181,166 +162,142 @@ function updateCategoryFilter() {
             .map(function(product) {
                 return String(product.category || "").trim();
             })
-            .filter(Boolean),
-        ),
-    ].sort(function(a, b) {
-        return a.localeCompare(b);
-    });
+            .filter(Boolean)
+        )
+    ].sort();
 
-    select.innerHTML = '<option value="">All Categories</option>';
+    categoryFilter.innerHTML = '<option value="">All Categories</option>';
 
     categories.forEach(function(category) {
         const option = document.createElement("option");
 
         option.value = category;
-        option.textContent = category;
+        option.innerText = category;
 
-        select.appendChild(option);
+        categoryFilter.appendChild(option);
     });
 
-    if (categories.includes(previous)) {
-        select.value = previous;
+    if (categories.includes(oldValue)) {
+        categoryFilter.value = oldValue;
     }
 }
 
 function renderProducts() {
-    if (!$("productSearch") || !$("categoryFilter") || !$("sortFilter")) {
+    const productSearch = getElement("productSearch");
+    const categoryFilter = getElement("categoryFilter");
+    const sortFilter = getElement("sortFilter");
+    const productTable = getElement("productTable");
+    const emptyState = getElement("emptyState");
+
+    if (!productSearch || !categoryFilter || !sortFilter || !productTable || !emptyState) {
         return;
     }
 
     updateCategoryFilter();
 
-    const search = $("productSearch").value.trim().toLowerCase();
-    const category = $("categoryFilter").value;
-    const sort = $("sortFilter").value;
+    const search = productSearch.value.trim().toLowerCase();
+    const category = categoryFilter.value;
+    const sort = sortFilter.value;
 
-    let filtered = products.filter(function(product) {
-        const productName = String(product.name || "").toLowerCase();
+    let filteredProducts = products.filter(function(product) {
+        const name = String(product.name || "").toLowerCase();
         const productCategory = String(product.category || "");
 
-        const matchesName = productName.includes(search);
-        const matchesCategory = !category || productCategory === category;
-
-        return matchesName && matchesCategory;
+        return name.includes(search) && (!category || productCategory === category);
     });
 
     if (sort === "low") {
-        filtered.sort(function(a, b) {
+        filteredProducts.sort(function(a, b) {
             return Number(a.price) - Number(b.price);
         });
     } else if (sort === "high") {
-        filtered.sort(function(a, b) {
+        filteredProducts.sort(function(a, b) {
             return Number(b.price) - Number(a.price);
         });
     } else if (sort === "az") {
-        filtered.sort(function(a, b) {
+        filteredProducts.sort(function(a, b) {
             return String(a.name || "").localeCompare(String(b.name || ""));
         });
     } else {
-        filtered.sort(function(a, b) {
-            return Number(b.createdAt) - Number(a.createdAt);
+        filteredProducts.sort(function(a, b) {
+            return Number(b.createdAt || 0) - Number(a.createdAt || 0);
         });
     }
 
-    if ($("resultCount")) {
-        $("resultCount").textContent =
-            `${filtered.length} product${filtered.length === 1 ? "" : "s"}`;
+    if (getElement("resultCount")) {
+        getElement("resultCount").innerText =
+            filteredProducts.length +
+            " product" +
+            (filteredProducts.length === 1 ? "" : "s");
     }
 
-    const table = $("productTable");
-    const empty = $("emptyState");
-
-    if (!table || !empty) {
+    if (filteredProducts.length === 0) {
+        productTable.innerHTML = "";
+        emptyState.style.display = "block";
         return;
     }
 
-    if (filtered.length === 0) {
-        table.innerHTML = "";
-        empty.style.display = "block";
-        return;
-    }
+    emptyState.style.display = "none";
 
-    empty.style.display = "none";
+    productTable.innerHTML = filteredProducts.map(function(product) {
+        const image = safeImageUrl(product.image);
 
-    table.innerHTML = filtered
-        .map(function(product) {
-            const image = safeImageUrl(product.image);
+        let thumb;
 
-            const thumb = image ?
-                `<img class="product-thumb" src="${escapeHTML(image)}" alt="" onerror="this.style.display='none'">` :
-                `<div class="product-thumb product-thumb-placeholder">
-                <i class="fa-regular fa-image"></i>
-            </div>`;
+        if (image) {
+            thumb =
+                '<img class="product-thumb" src="' +
+                image +
+                '" alt="" onerror="this.style.display=\'none\'">';
+        } else {
+            thumb =
+                '<div class="product-thumb product-thumb-placeholder">' +
+                '<i class="fa-regular fa-image"></i>' +
+                "</div>";
+        }
 
-            const statusClass = product.status === "Active" ? "active" : "inactive";
+        const statusClass = product.status === "Active" ? "active" : "inactive";
 
-            return `
+        return `
             <tr>
                 <td>
                     <div class="product-cell">
                         ${thumb}
-                        <span class="product-name">
-                            ${escapeHTML(product.name)}
-                        </span>
+                        <span class="product-name">${product.name || ""}</span>
                     </div>
                 </td>
-
                 <td>
-                    <span class="category-tag">
-                        ${escapeHTML(product.category)}
-                    </span>
+                    <span class="category-tag">${product.category || ""}</span>
                 </td>
-
                 <td>
                     <strong>${formatPrice(product.price)}</strong>
                 </td>
-
                 <td>${Number(product.quantity)}</td>
-
                 <td>
                     <span class="status ${statusClass}">
-                        ${escapeHTML(product.status)}
+                        ${product.status || ""}
                     </span>
                 </td>
-
                 <td>
                     <div class="action-buttons">
-                        <button
-                            class="icon-btn"
-                            title="View details"
-                            data-action="view"
-                            data-id="${escapeHTML(product.id)}"
-                        >
+                        <button class="icon-btn" title="View details" data-action="view" data-id="${product.id}">
                             <i class="fa-solid fa-eye"></i>
                         </button>
-
-                        <button
-                            class="icon-btn"
-                            title="Edit product"
-                            data-action="edit"
-                            data-id="${escapeHTML(product.id)}"
-                        >
+                        <button class="icon-btn" title="Edit product" data-action="edit" data-id="${product.id}">
                             <i class="fa-solid fa-pen"></i>
                         </button>
-
-                        <button
-                            class="icon-btn delete"
-                            title="Delete product"
-                            data-action="delete"
-                            data-id="${escapeHTML(product.id)}"
-                        >
+                        <button class="icon-btn delete" title="Delete product" data-action="delete" data-id="${product.id}">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
                 </td>
             </tr>
         `;
-        })
-        .join("");
+    }).join("");
 }
 
-if ($("productTable")) {
-    $("productTable").addEventListener("click", function(event) {
+if (getElement("productTable")) {
+    getElement("productTable").addEventListener("click", function(event) {
         const button = event.target.closest("button[data-action]");
 
         if (!button) {
@@ -366,16 +323,15 @@ if ($("productTable")) {
 
 function viewProduct(id) {
     const product = products.find(function(item) {
-        return item.id === id;
+        return String(item.id) === String(id);
     });
 
     if (!product) {
+        showToast("Product not found.");
         return;
     }
 
     closeModal();
-
-    const image = safeImageUrl(product.image);
 
     const backdrop = document.createElement("div");
     backdrop.className = "modal-backdrop";
@@ -385,30 +341,29 @@ function viewProduct(id) {
     modal.className = "modal";
     modal.setAttribute("role", "dialog");
     modal.setAttribute("aria-modal", "true");
-    modal.setAttribute("aria-label", "Product details");
 
     const title = document.createElement("div");
     title.className = "modal-top";
 
     const heading = document.createElement("h2");
-    heading.textContent = "Product Details";
+    heading.innerText = "Product Details";
 
     const close = document.createElement("button");
     close.className = "modal-close";
     close.type = "button";
     close.innerHTML = "&times;";
-    close.setAttribute("aria-label", "Close");
     close.addEventListener("click", closeModal);
 
     title.append(heading, close);
     modal.appendChild(title);
 
+    const image = safeImageUrl(product.image);
+
     if (image) {
         const img = document.createElement("img");
-
         img.className = "modal-image";
         img.src = image;
-        img.alt = product.name;
+        img.alt = product.name || "Product image";
 
         img.onerror = function() {
             img.remove();
@@ -418,30 +373,27 @@ function viewProduct(id) {
     }
 
     const name = document.createElement("h3");
-    name.textContent = product.name;
+    name.innerText = product.name || "";
     modal.appendChild(name);
 
     const details = document.createElement("div");
     details.className = "modal-details";
 
     const detailItems = [
-        ["Category", product.category],
+        ["Category", product.category || ""],
         ["Price", formatPrice(product.price)],
         ["Quantity", String(product.quantity)],
-        ["Status", product.status],
+        ["Status", product.status || ""]
     ];
 
     detailItems.forEach(function(itemData) {
-        const label = itemData[0];
-        const value = itemData[1];
-
         const item = document.createElement("div");
 
         const small = document.createElement("small");
-        small.textContent = label;
+        small.innerText = itemData[0];
 
         const strong = document.createElement("strong");
-        strong.textContent = value;
+        strong.innerText = itemData[1];
 
         item.append(small, strong);
         details.appendChild(item);
@@ -451,12 +403,17 @@ function viewProduct(id) {
 
     const description = document.createElement("p");
     description.className = "modal-description";
-    description.textContent = product.description || "No description provided.";
+    description.innerText = product.description || "No description provided.";
 
     modal.appendChild(description);
 
     const actions = document.createElement("div");
     actions.className = "modal-actions";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "secondary-btn";
+    closeButton.innerText = "Close";
+    closeButton.addEventListener("click", closeModal);
 
     const editButton = document.createElement("button");
     editButton.className = "primary-btn";
@@ -466,12 +423,6 @@ function viewProduct(id) {
         closeModal();
         openEditForm(id);
     });
-
-    const closeButton = document.createElement("button");
-    closeButton.className = "secondary-btn";
-    closeButton.textContent = "Close";
-
-    closeButton.addEventListener("click", closeModal);
 
     actions.append(closeButton, editButton);
     modal.appendChild(actions);
@@ -489,7 +440,7 @@ function viewProduct(id) {
 }
 
 function closeModal() {
-    const modal = $("productModal");
+    const modal = getElement("productModal");
 
     if (modal) {
         modal.remove();
@@ -502,21 +453,22 @@ document.addEventListener("keydown", function(event) {
     }
 });
 
-if ($("addForm")) {
-    $("addForm").addEventListener("submit", function(event) {
+if (getElement("addForm")) {
+    getElement("addForm").addEventListener("submit", function(event) {
         event.preventDefault();
 
-        const name = $("addName").value.trim();
-        const price = Number($("addPrice").value);
-        const quantity = Number($("addQuantity").value);
-        const category = $("addCategory").value.trim();
-        const imageInput = $("addImage").value.trim();
+        const name = getElement("addName").value.trim();
+        const price = Number(getElement("addPrice").value);
+        const quantity = Number(getElement("addQuantity").value);
+        const category = getElement("addCategory").value.trim();
+        const imageInput = getElement("addImage").value.trim();
         const image = safeImageUrl(imageInput);
-        const status = $("addStatus").value;
-        const description = $("addDescription").value.trim();
+        const status = getElement("addStatus").value;
+        const description = getElement("addDescription").value.trim();
 
-        if (!name ||
-            !category ||
+        if (
+            name === "" ||
+            category === "" ||
             !Number.isFinite(price) ||
             price <= 0 ||
             !Number.isInteger(quantity) ||
@@ -526,8 +478,8 @@ if ($("addForm")) {
             return;
         }
 
-        if (imageInput && !image) {
-            showToast("Please enter a valid HTTP or HTTPS image URL.");
+        if (imageInput !== "" && image === "") {
+            showToast("Please enter a valid image URL.");
             return;
         }
 
@@ -540,17 +492,18 @@ if ($("addForm")) {
             image: image,
             status: status,
             description: description,
-            createdAt: Date.now(),
+            createdAt: Date.now()
         };
 
         products.push(product);
         saveProducts();
 
-        $("addForm").reset();
+        getElement("addForm").reset();
 
         updateImagePreview();
         updateStats();
         renderProducts();
+        renderEditList();
 
         showToast("Product added successfully!");
         showPage("view");
@@ -558,55 +511,58 @@ if ($("addForm")) {
 }
 
 function updateImagePreview() {
-    if (!$("addImage") || !$("addImagePreview") || !$("addImagePlaceholder")) {
+    const input = getElement("addImage");
+    const image = getElement("addImagePreview");
+    const placeholder = getElement("addImagePlaceholder");
+
+    if (!input || !image || !placeholder) {
         return;
     }
 
-    const url = safeImageUrl($("addImage").value.trim());
-    const img = $("addImagePreview");
-    const placeholder = $("addImagePlaceholder");
+    const url = safeImageUrl(input.value.trim());
 
     if (!url) {
-        img.hidden = true;
-        img.removeAttribute("src");
+        image.hidden = true;
+        image.removeAttribute("src");
         placeholder.hidden = false;
         return;
     }
 
-    img.onload = function() {
-        img.hidden = false;
+    image.onload = function() {
+        image.hidden = false;
         placeholder.hidden = true;
     };
 
-    img.onerror = function() {
-        img.hidden = true;
+    image.onerror = function() {
+        image.hidden = true;
         placeholder.hidden = false;
     };
 
-    img.src = url;
+    image.src = url;
 }
 
-if ($("addImage")) {
-    $("addImage").addEventListener("input", updateImagePreview);
+if (getElement("addImage")) {
+    getElement("addImage").addEventListener("input", updateImagePreview);
 }
 
 function renderEditList() {
-    if (!$("editSearch") || !$("editProductList")) {
+    const searchInput = getElement("editSearch");
+    const list = getElement("editProductList");
+
+    if (!searchInput || !list) {
         return;
     }
 
-    const search = $("editSearch").value.trim().toLowerCase();
+    const search = searchInput.value.trim().toLowerCase();
 
-    const filtered = products.filter(function(product) {
+    const filteredProducts = products.filter(function(product) {
         const name = String(product.name || "").toLowerCase();
         const category = String(product.category || "").toLowerCase();
 
         return name.includes(search) || category.includes(search);
     });
 
-    const list = $("editProductList");
-
-    if (!filtered.length) {
+    if (filteredProducts.length === 0) {
         list.innerHTML = `
             <div class="empty-state" style="display:block">
                 <i class="fa-solid fa-box-open"></i>
@@ -618,46 +574,47 @@ function renderEditList() {
         return;
     }
 
-    list.innerHTML = filtered
-        .map(function(product) {
-            const image = safeImageUrl(product.image);
+    list.innerHTML = filteredProducts.map(function(product) {
+        const image = safeImageUrl(product.image);
 
-            const thumb = image ?
-                `<img class="product-thumb" src="${escapeHTML(image)}" alt="" onerror="this.style.display='none'">` :
-                `<div class="product-thumb product-thumb-placeholder">
-                <i class="fa-regular fa-image"></i>
-            </div>`;
+        let thumb;
 
-            return `
+        if (image) {
+            thumb =
+                '<img class="product-thumb" src="' +
+                image +
+                '" alt="" onerror="this.style.display=\'none\'">';
+        } else {
+            thumb =
+                '<div class="product-thumb product-thumb-placeholder">' +
+                '<i class="fa-regular fa-image"></i>' +
+                "</div>";
+        }
+
+        return `
             <div class="edit-item">
                 <div class="edit-item-info">
                     ${thumb}
-
                     <div>
-                        <strong>${escapeHTML(product.name)}</strong>
+                        <strong>${product.name || ""}</strong>
                         <p>
-                            ${escapeHTML(product.category)}
+                            ${product.category || ""}
                             ·
                             ${formatPrice(product.price)}
                         </p>
                     </div>
                 </div>
-
-                <button
-                    class="primary-btn"
-                    data-edit-id="${escapeHTML(product.id)}"
-                >
+                <button class="primary-btn" data-edit-id="${product.id}">
                     <i class="fa-solid fa-pen"></i>
                     Edit
                 </button>
             </div>
         `;
-        })
-        .join("");
+    }).join("");
 }
 
-if ($("editProductList")) {
-    $("editProductList").addEventListener("click", function(event) {
+if (getElement("editProductList")) {
+    getElement("editProductList").addEventListener("click", function(event) {
         const button = event.target.closest("button[data-edit-id]");
 
         if (button) {
@@ -668,7 +625,7 @@ if ($("editProductList")) {
 
 function openEditForm(id) {
     const product = products.find(function(item) {
-        return item.id === id;
+        return String(item.id) === String(id);
     });
 
     if (!product) {
@@ -678,29 +635,59 @@ function openEditForm(id) {
 
     showPage("edit");
 
-    $("editId").value = product.id;
-    $("editName").value = product.name;
-    $("editPrice").value = product.price;
-    $("editQuantity").value = product.quantity;
-    $("editCategory").value = product.category;
-    $("editStatus").value = product.status;
-    $("editImage").value = product.image || "";
-    $("editDescription").value = product.description || "";
+    if (getElement("editId")) {
+        getElement("editId").value = product.id;
+    }
 
-    $("editSelectorCard").hidden = true;
-    $("editFormCard").hidden = false;
+    if (getElement("editName")) {
+        getElement("editName").value = product.name || "";
+    }
 
-    $("editName").focus();
+    if (getElement("editPrice")) {
+        getElement("editPrice").value = product.price || "";
+    }
+
+    if (getElement("editQuantity")) {
+        getElement("editQuantity").value = product.quantity || "";
+    }
+
+    if (getElement("editCategory")) {
+        getElement("editCategory").value = product.category || "";
+    }
+
+    if (getElement("editStatus")) {
+        getElement("editStatus").value = product.status || "";
+    }
+
+    if (getElement("editImage")) {
+        getElement("editImage").value = product.image || "";
+    }
+
+    if (getElement("editDescription")) {
+        getElement("editDescription").value = product.description || "";
+    }
+
+    if (getElement("editSelectorCard")) {
+        getElement("editSelectorCard").hidden = true;
+    }
+
+    if (getElement("editFormCard")) {
+        getElement("editFormCard").hidden = false;
+    }
+
+    if (getElement("editName")) {
+        getElement("editName").focus();
+    }
 }
 
-if ($("editForm")) {
-    $("editForm").addEventListener("submit", function(event) {
+if (getElement("editForm")) {
+    getElement("editForm").addEventListener("submit", function(event) {
         event.preventDefault();
 
-        const id = $("editId").value;
+        const id = getElement("editId").value;
 
         const index = products.findIndex(function(item) {
-            return item.id === id;
+            return String(item.id) === String(id);
         });
 
         if (index === -1) {
@@ -709,15 +696,18 @@ if ($("editForm")) {
             return;
         }
 
-        const name = $("editName").value.trim();
-        const price = Number($("editPrice").value);
-        const quantity = Number($("editQuantity").value);
-        const category = $("editCategory").value.trim();
-        const imageInput = $("editImage").value.trim();
+        const name = getElement("editName").value.trim();
+        const price = Number(getElement("editPrice").value);
+        const quantity = Number(getElement("editQuantity").value);
+        const category = getElement("editCategory").value.trim();
+        const imageInput = getElement("editImage").value.trim();
         const image = safeImageUrl(imageInput);
+        const status = getElement("editStatus").value;
+        const description = getElement("editDescription").value.trim();
 
-        if (!name ||
-            !category ||
+        if (
+            name === "" ||
+            category === "" ||
             !Number.isFinite(price) ||
             price <= 0 ||
             !Number.isInteger(quantity) ||
@@ -727,8 +717,8 @@ if ($("editForm")) {
             return;
         }
 
-        if (imageInput && !image) {
-            showToast("Please enter a valid HTTP or HTTPS image URL.");
+        if (imageInput !== "" && image === "") {
+            showToast("Please enter a valid image URL.");
             return;
         }
 
@@ -739,8 +729,8 @@ if ($("editForm")) {
             quantity: quantity,
             category: category,
             image: image,
-            status: $("editStatus").value,
-            description: $("editDescription").value.trim(),
+            status: status,
+            description: description
         };
 
         saveProducts();
@@ -754,32 +744,47 @@ if ($("editForm")) {
 }
 
 function cancelEdit() {
-    if (!$("editForm")) {
+    const editForm = getElement("editForm");
+
+    if (!editForm) {
         return;
     }
 
-    $("editForm").reset();
-    $("editId").value = "";
+    editForm.reset();
 
-    $("editFormCard").hidden = true;
-    $("editSelectorCard").hidden = false;
+    if (getElement("editId")) {
+        getElement("editId").value = "";
+    }
 
-    $("editSearch").value = "";
+    if (getElement("editFormCard")) {
+        getElement("editFormCard").hidden = true;
+    }
+
+    if (getElement("editSelectorCard")) {
+        getElement("editSelectorCard").hidden = false;
+    }
+
+    if (getElement("editSearch")) {
+        getElement("editSearch").value = "";
+    }
 
     renderEditList();
 }
 
 function deleteProduct(id) {
     const product = products.find(function(item) {
-        return item.id === id;
+        return String(item.id) === String(id);
     });
 
     if (!product) {
+        showToast("Product not found.");
         return;
     }
 
     const confirmed = confirm(
-        `Are you sure you want to delete "${product.name}"?`,
+        'Are you sure you want to delete "' +
+        product.name +
+        '"?'
     );
 
     if (!confirmed) {
@@ -787,12 +792,15 @@ function deleteProduct(id) {
     }
 
     products = products.filter(function(item) {
-        return item.id !== id;
+        return String(item.id) !== String(id);
     });
 
     saveProducts();
 
-    if ($("editId") && $("editId").value === id) {
+    if (
+        getElement("editId") &&
+        String(getElement("editId").value) === String(id)
+    ) {
         cancelEdit();
     }
 
@@ -803,10 +811,25 @@ function deleteProduct(id) {
     showToast("Product deleted successfully!");
 }
 
-if ($("currentYear")) {
-    $("currentYear").textContent = new Date().getFullYear();
+if (getElement("productSearch")) {
+    getElement("productSearch").addEventListener("input", renderProducts);
 }
 
+if (getElement("categoryFilter")) {
+    getElement("categoryFilter").addEventListener("change", renderProducts);
+}
+
+if (getElement("sortFilter")) {
+    getElement("sortFilter").addEventListener("change", renderProducts);
+}
+
+if (getElement("editSearch")) {
+    getElement("editSearch").addEventListener("input", renderEditList);
+}
+
+if (getElement("currentYear")) {
+    getElement("currentYear").innerText = new Date().getFullYear();
+}
 
 updateStats();
 renderProducts();
